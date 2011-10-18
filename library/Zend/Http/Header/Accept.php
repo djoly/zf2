@@ -21,7 +21,9 @@ class Accept implements HeaderDescription
         if (strtolower($name) !== 'accept') {
             throw new Exception\InvalidArgumentException('Invalid header line for accept header string');
         }
-
+		
+        //Testing branching
+		
         // process multiple accept values
         // @todo q and level processing here to be retrieved by getters in accept object later
         $acceptHeader->values = explode(',', $values);
