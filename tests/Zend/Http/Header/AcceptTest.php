@@ -22,20 +22,47 @@ class AcceptTest extends \PHPUnit_Framework_TestCase
 
     public function testAcceptGetFieldValueReturnsProperValue()
     {
-        $this->markTestIncomplete('Accept needs to be completed');
-
         $acceptHeader = new Accept();
-        $this->assertEquals('xxx', $acceptHeader->getFieldValue());
+        $acceptHeader->addValue('text/html');
+        $this->assertEquals('text/html', $acceptHeader->getFieldValue());
     }
 
     public function testAcceptToStringReturnsHeaderFormattedString()
     {
-        $this->markTestIncomplete('Accept needs to be completed');
-
         $acceptHeader = new Accept();
+        $acceptHeader->addValue('text/xml')
+                     ->addValue('text/html;level=1')
+                     ->addValue('text/*;q=0.8');
+        $this->assertEquals('Accept: text/xml,text/html;level=1,text/*;q=0.8', $acceptHeader->toString());
+    }
+    
+    
+    /**
+     * Test quality factor value
+     */
+    public function testQualityFactor()
+    {
+        $header = Accept::fromString('Accept: text/plain; q=0.5, text/html,text/x-dvi; q=0.8, text/x-c');
+        $this->assertTrue($header->hasValue('text/plain'));
+        $this->assertEquals($header->getQualityFactor('text/plain'), 0.5);
+        $this->assertTrue($header->hasValue('text/html'));
+        $this->assertEquals($header->getQualityFactor('text/html'), 1); // by default
+        $this->assertTrue($header->hasValue('text/x-dvi'));
+        $this->assertEquals($header->getQualityFactor('text/x-dvi'), 0.8);
+    }
 
-        // @todo set some values, then test output
-        $this->assertEmpty('Accept: xxx', $acceptHeader->toString());
+    /**
+     * Test level value
+     */
+    public function testLevel()
+    {
+        $header= Accept::fromString('Accept: text/html;level=1, text/xml;level=2,text/*');
+        $this->assertTrue($header->hasValue('text/html'));
+        $this->assertEquals($header->getLevel('text/html'), 1);
+        $this->assertTrue($header->hasValue('text/xml'));
+        $this->assertEquals($header->getLevel('text/xml'), 2); // by default
+        $this->assertTrue($header->hasValue('text/*'));
+        $this->assertEquals($header->getLevel('text/*'),false);
     }
 
     /** Implmentation specific tests here */
