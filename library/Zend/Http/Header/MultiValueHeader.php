@@ -12,44 +12,59 @@ abstract class MultiValueHeader implements HeaderDescription
 	public function addValue($value,$spec = null)
 	{
         $value = trim($value);
-        
-		//Check if priority spec in value string
+
 		if(substr_count($value,';')){
 			list($value,$spec) = explode(';',$value,2);
-			
-			//Spec may contrain level= and q= paramaters, seperated by a semi-colon ';'
-			//text/html;level=2;q=0.4
-			//@todo complete multi-param spec parsing
-			if(substr_count($spec,';')){
-			    $spec = explode(';',$spec);
-			}
 		}
-   
-		//Priority may be q= or level=
-		if(null !== $spec){
-		    
-		    if(is_array($spec)){
-		        if(isset($spec['level'])){
-		            $type = 'level';
-		            $val = (int)$spec['level'];
-		        } elseif(isset($spec['q'])){
-		            $type = 'q';
-		            $val = floatval($spec['q']);
-		        }
-		    } else {
-			    list($type,$val) = explode('=',trim($spec));
-		    }
-		    
-			if($type == 'q' || $type == 'level'){
-			    $this->values[$value] = array($type => $val);
-			    
-			} else {
-			    throw new \InvalidArgumentException(sprintf('%s is not a valid header value priority parameter.',$type));
-			}
-		} else {
-		    $this->values[$value] = array();
-		}
+		
+		$this->values[$value] = $this->parseSpec($spec);
 		return $this;
+	}
+	
+	/**
+	 * Parses spec from either string or array. Returns array
+	 * to assign to value.
+	 * 
+	 * @param mixed $spec
+	 * @return array
+	 * @throws \InvalidArgumentException
+	 */
+	protected function parseSpec($spec)
+	{
+	    if(null === $spec){
+	        return array();
+	    }
+	    
+	    $params = array();
+	    if(is_string($spec)){
+		    //Spec may contain level= and q= parameters, seperated by a semi-colon ';'
+			//text/html;level=2;q=0.4		
+			$spec = explode(';',$spec);
+            foreach($spec as $s){
+                list($param,$value) = explode('=',trim($s));
+                $params[$param] = $value;
+            }
+	    } else if(is_array($spec)){
+	        $params = $spec;
+	    }
+	    
+	    //Filter and validate params
+	    foreach($params as $param => &$val){
+	        if($param == 'q'){
+	            if((is_string($val) && !preg_match('#^1|(0?\.{1}[0-9]{1})$#',$val)) || (is_float($val) && !($val < 1 && $val > 0))){
+	                throw new \InvalidArgumentException(sprintf('%s is not a valid quality factor value. Must be a float value between 0 and 1.',$val));
+	            }
+	            $val = (float)$val;
+	        } else if($param == 'level'){
+	            if(!is_int($val) && !preg_match('#^\d{1}$#',$val)){
+	                throw new \InvalidArgumentException(sprintf('%s is not a valid level value. Must be a single digit integer.',$val));
+	            }
+	            $val = (int)$val;
+	        } else {
+	            throw new \InvalidArgumentException(sprintf('%s is not a valid parameter.',$param));
+	        }
+	    }
+	    return $params;
 	}
 	
 	public function addValues($values)
@@ -75,7 +90,8 @@ abstract class MultiValueHeader implements HeaderDescription
 	        return false;
 	    }
 		
-	    return isset($this->values[$value]['q']) ? $this->values[$value]['q'] : 1;
+	    return isset($this->values[$value]['q']) 
+	        ? $this->values[$value]['q'] : 1;
 	}
 	
 	public function getLevel($value)
@@ -84,7 +100,8 @@ abstract class MultiValueHeader implements HeaderDescription
 	        return false;
 	    }
 
-		return isset($this->values[$value]['level']) ? $this->values[$value]['level'] : false;
+		return isset($this->values[$value]['level']) 
+		    ? $this->values[$value]['level'] : false;
 	}
 	
 	public function hasValue($value)

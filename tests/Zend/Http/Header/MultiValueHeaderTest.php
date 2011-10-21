@@ -15,7 +15,7 @@ class MultiValueHeaderTest extends \PHPUnit_Framework_TestCase
         $this->assertTrue($header->hasValue('text/xml'));
     }
     
-    public function testAddQualityFactoryInValueString()
+    public function testAddQualityFactorInValueString()
     {
         $header = new MultiValueHeader();
         $header->addValue('text/html;q=0.5')
@@ -25,6 +25,30 @@ class MultiValueHeaderTest extends \PHPUnit_Framework_TestCase
         $this->assertEquals(0.5,$header->getQualityFactor('text/html'));
         $this->assertEquals(0.3,$header->getQualityFactor('text/xml'));
         $this->assertEquals(0.1,$header->getQualityFactor('text/plain'));
+    }
+    
+    public function testBadValueParameterNameResultsInException()
+    {
+        $header = new MultiValueHeader();
+        
+        $this->setExpectedException('InvalidArgumentException','qs is not a valid parameter.');
+        $header->addValue('text/html;qs=0.5');
+    }
+    
+    public function testBadLevelValueResultsInException()
+    {
+        $header = new MultiValueHeader();
+        
+        $this->setExpectedException('InvalidArgumentException','foo is not a valid level value. Must be a single digit integer.');
+        $header->addValue('text/html;level=foo');
+    }
+    
+    public function testBadQualityFactorValueResultsInException()
+    {
+        $header = new MultiValueHeader();
+        
+        $this->setExpectedException('InvalidArgumentException','2 is not a valid quality factor value. Must be a float value between 0 and 1.');
+        $header->addValue('text/html;q=2');
     }
     
     public function testQualityFactorDefaultToOne()
@@ -48,6 +72,21 @@ class MultiValueHeaderTest extends \PHPUnit_Framework_TestCase
             
         $this->assertEquals(1,$header->getLevel('text/html'));
         $this->assertEquals(false,$header->getLevel('text/xml'));
+        $this->assertEquals(2,$header->getLevel('text/plain'));
+    }
+    
+    /**
+     * @see http://www.w3.org/Protocols/rfc2616/rfc2616-sec14.html
+     * Accept header example shows the value 'text/html;level=2;q=0.4'.
+     * Does this you can specify both?
+     */
+    public function testLevelAndQualityFactorCanBeDefinedForASingleValue()
+    {
+        $header = new MultiValueHeader();
+        $header->addValue('text/html;level=1')
+            ->addValue('text/xml')
+            ->addValue('text/plain; level=2;q=0.2');
+        $this->assertEquals(0.2,$header->getQualityFactor('text/plain'));
         $this->assertEquals(2,$header->getLevel('text/plain'));
     }
     
