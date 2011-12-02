@@ -27,8 +27,7 @@ namespace Zend\Mvc\Router\Http;
 use Traversable,
     Zend\Stdlib\IteratorToArray,
     Zend\Stdlib\RequestDescription as Request,
-    Zend\Mvc\Router\Exception,
-    Zend\Mvc\Router\Route;
+    Zend\Mvc\Router\Exception;
 
 /**
  * Regex route.
@@ -63,6 +62,13 @@ class Regex implements Route
      * @var string
      */
     protected $spec;
+    
+    /**
+     * List of assembled parameters.
+     * 
+     * @var array
+     */
+    protected $assembledParams = array();
     
     /**
      * Create a new regex route.
@@ -143,6 +149,8 @@ class Regex implements Route
         foreach ($matches as $key => $value) {
             if (is_numeric($key) || is_int($key)) {
                 unset($matches[$key]);
+            } else {
+                $matches[$key] = urldecode($matches[$key]);
             }
         }
 
@@ -159,17 +167,31 @@ class Regex implements Route
      */
     public function assemble(array $params = array(), array $options = array())
     {
-        $url    = $this->spec;
-        $params = array_merge($this->defaults, $params);
+        $url                   = $this->spec;
+        $mergedParams          = array_merge($this->defaults, $params);
+        $this->assembledParams = array();
         
-        foreach ($params as $key => $value) {
+        foreach ($mergedParams as $key => $value) {
             $spec = '%' . $key . '%';
             
-            if (strstr($url, $spec) !== false) {
+            if (strpos($url, $spec) !== false) {
                 $url = str_replace($spec, urlencode($value), $url);
+                
+                $this->assembledParams[] = $key;
             }
         }
         
         return $url;
+    }
+    
+    /**
+     * getAssembledParams(): defined by Route interface.
+     * 
+     * @see    Route::getAssembledParams
+     * @return array
+     */
+    public function getAssembledParams()
+    {
+        return $this->assembledParams;
     }
 }

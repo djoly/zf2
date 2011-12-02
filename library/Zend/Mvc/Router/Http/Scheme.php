@@ -27,8 +27,7 @@ namespace Zend\Mvc\Router\Http;
 use Traversable,
     Zend\Stdlib\IteratorToArray,
     Zend\Stdlib\RequestDescription as Request,
-    Zend\Mvc\Router\Exception,
-    Zend\Mvc\Router\Route;
+    Zend\Mvc\Router\Exception;
 
 /**
  * Scheme route.
@@ -136,5 +135,16 @@ class Scheme implements Route
         
         // A scheme does not contribute to the path, thus nothing is returned.
         return '';
+    }
+    
+    /**
+     * getAssembledParams(): defined by Route interface.
+     * 
+     * @see    Route::getAssembledParams
+     * @return array
+     */
+    public function getAssembledParams()
+    {
+        return array();
     }
 }

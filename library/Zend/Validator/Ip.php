@@ -91,11 +91,15 @@ class Ip extends AbstractValidator
     /**
      * Sets the options for this validator
      *
-     * @param array $options
+     * @param array|Traversable $options
      * @return \Zend\Validator\Ip
      */
-    public function setOptions($options)
+    public function setOptions($options = array())
     {
+        if (!is_array($options) && !$options instanceof Traversable) {
+            throw new Exception\InvalidArgumentException(__METHOD__ . ' expects an array or Traversable');
+        }
+
         if (array_key_exists('allowipv6', $options)) {
             $this->_options['allowipv6'] = (boolean) $options['allowipv6'];
         }
@@ -108,7 +112,7 @@ class Ip extends AbstractValidator
             throw new Exception\InvalidArgumentException('Nothing to validate. Check your options');
         }
 
-        return $this;
+        return parent::setOptions($options);
     }
 
     /**
@@ -120,15 +124,15 @@ class Ip extends AbstractValidator
     public function isValid($value)
     {
         if (!is_string($value)) {
-            $this->_error(self::INVALID);
+            $this->error(self::INVALID);
             return false;
         }
 
-        $this->_setValue($value);
+        $this->setValue($value);
         if (($this->_options['allowipv4'] && !$this->_options['allowipv6'] && !$this->_validateIPv4($value)) ||
             (!$this->_options['allowipv4'] && $this->_options['allowipv6'] && !$this->_validateIPv6($value)) ||
             ($this->_options['allowipv4'] && $this->_options['allowipv6'] && !$this->_validateIPv4($value) && !$this->_validateIPv6($value))) {
-            $this->_error(self::NOT_IP_ADDRESS);
+            $this->error(self::NOT_IP_ADDRESS);
             return false;
         }
 

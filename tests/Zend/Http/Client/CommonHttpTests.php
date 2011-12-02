@@ -498,8 +498,8 @@ abstract class CommonHttpTests extends \PHPUnit_Framework_TestCase
         $this->client->setConfig(array('maxredirects' => 1));
 
         // Get the host and port part of our baseuri
-        $uri = $this->client->getUri()->getScheme() . '://' . $this->client->getUri()->getHost() . ':' .
-            $this->client->getUri()->getPort();
+        $port = ($this->client->getUri()->getPort() == 80) ? '' : ':' .$this->client->getUri()->getPort(); 
+        $uri = $this->client->getUri()->getScheme() . '://' . $this->client->getUri()->getHost() . $port;
         
         $res = $this->client->send();
         
@@ -914,6 +914,29 @@ abstract class CommonHttpTests extends \PHPUnit_Framework_TestCase
         }
 
         $this->assertEquals($expect, strlen($response->getBody()));
+    }
+
+
+    /**
+     * @group ZF2-78
+     * @dataProvider parameterArrayProvider
+     */
+    public function testContentTypeAdditionlInfo($params)
+    {
+        $content_type = 'application/x-www-form-urlencoded; charset=UTF-8';
+
+        $this->client->setUri($this->baseuri . 'testPostData.php');
+        $this->client->setHeaders(array(
+            'Content-Type' => $content_type
+        ));
+        $this->client->setMethod(\Zend\Http\Request::METHOD_POST);
+
+        $this->client->setParameterPost($params);
+        
+        $this->client->send();
+        $request = Request::fromString($this->client->getLastRawRequest());
+        $this->assertEquals($content_type, 
+                            $request->headers()->get('Content-Type')->getFieldValue());
     }
 
     /**

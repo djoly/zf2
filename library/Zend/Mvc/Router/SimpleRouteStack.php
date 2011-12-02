@@ -130,7 +130,7 @@ class SimpleRouteStack implements RouteStack
     /**
      * addRoutes(): defined by RouteStack interface.
      *
-     * @see    Route::addRoutes()
+     * @see    RouteStack::addRoutes()
      * @param  array|Traversable $routes
      * @return RouteStack
      */
@@ -160,6 +160,10 @@ class SimpleRouteStack implements RouteStack
     {
         if (!$route instanceof Route) {
             $route = $this->routeFromArray($route);
+        }
+        
+        if ($priority !== null && isset($route->priority)) {
+            $priority = $route->priority;
         }
 
         $this->routes->insert($name, $route, $priority);
@@ -200,11 +204,15 @@ class SimpleRouteStack implements RouteStack
         if (!isset($specs['type'])) {
             throw new Exception\InvalidArgumentException('Missing "type" option');
         } elseif (!isset($specs['options'])) {
-            throw new Exception\InvalidArgumentException('Missing "name" option');
+            $specs['options'] = array();
         }
 
         $route = $this->routeBroker()->load($specs['type'], $specs['options']);
 
+        if (isset($specs['priority'])) {
+            $route->priority = $specs['priority'];
+        }
+        
         return $route;
     }
 
@@ -217,8 +225,10 @@ class SimpleRouteStack implements RouteStack
      */
     public function match(Request $request)
     {
-        foreach ($this->routes as $route) {
+        foreach ($this->routes as $name => $route) {
             if (($match = $route->match($request)) instanceof RouteMatch) {
+                $match->setMatchedRouteName($name);
+                
                 return $match;
             }
         }

@@ -72,6 +72,7 @@ class ManagerTest extends TestCase
     public function testCanLoadSomeModule()
     {
         $moduleManager = new Manager(array('SomeModule'));
+        $moduleManager->loadModules();
         $loadedModules = $moduleManager->getLoadedModules();
         $this->assertInstanceOf('SomeModule\Module', $loadedModules['SomeModule']);
         $config = $moduleManager->getMergedConfig();
@@ -81,6 +82,7 @@ class ManagerTest extends TestCase
     public function testCanLoadMultipleModules()
     {
         $moduleManager = new Manager(array('BarModule', 'BazModule'));
+        $moduleManager->loadModules();
         $loadedModules = $moduleManager->getLoadedModules();
         $this->assertInstanceOf('BarModule\Module', $loadedModules['BarModule']);
         $this->assertInstanceOf('BazModule\Module', $loadedModules['BazModule']);
@@ -97,12 +99,14 @@ class ManagerTest extends TestCase
         ));
         // build the cache
         $moduleManager = new Manager(array('BarModule', 'BazModule'), $options);
+        $moduleManager->loadModules();
         $config = $moduleManager->getMergedConfig();
         $this->assertSame('foo', $config->bar);
         $this->assertSame('bar', $config->baz);
 
         // use the cache
         $moduleManager = new Manager(array('BarModule', 'BazModule'), $options);
+        $moduleManager->loadModules();
         $config = $moduleManager->getMergedConfig();
         $this->assertSame('foo', $config->bar);
         $this->assertSame('bar', $config->baz);
@@ -112,168 +116,5 @@ class ManagerTest extends TestCase
     {
         $this->setExpectedException('InvalidArgumentException');
         $moduleManager = new Manager('stringShouldBeArray');
-    }
-    
-    public function testDoubleProvisionException()
-    {
-    	 $this->setExpectedException('RuntimeException');
-    	 $options = new ManagerOptions(array(
-            'enable_dependency_check' => true,
-        ));
-        // build the cache
-        $moduleManager = new Manager(array('BarModule', 'DoubleModule'), $options);
-        $config = $moduleManager->getMergedConfig();
-        $moduleManager->getDependencies();
-    }
-    
-    public function testGetOfDependanciesPostLoad()
-    {
-    	 $options = new ManagerOptions(array(
-            'enable_dependency_check' => true,
-        ));
-        // build the cache
-        $moduleManager = new Manager(array('BarModule'), $options);
-        $dependencies = $moduleManager->getDependencies();
-        $this->assertInternalType('array', $dependencies);
-        $this->assertArrayHasKey('php', $dependencies);
-    }
-
-	public function testGetOfProvisionsPostLoad()
-    {
-    	 $options = new ManagerOptions(array(
-            'enable_dependency_check' => true,
-        ));
-        // build the cache
-        $moduleManager = new Manager(array('BarModule'), $options);
-        $provisions = $moduleManager->getProvisions();
-        $this->assertInternalType('array', $provisions);
-        $this->assertArrayHasKey('BarModule', $provisions);
-    }
-    
-    public function testResolutionOfMinimumPhpVersion()
-    {
-    	$this->setExpectedException('RuntimeException');
-    	$options = new ManagerOptions(array(
-            'enable_dependency_check' => true,
-        ));
-        // build the cache
-        $moduleManager = new Manager(array('ImpossibleModule', 'BarModule'), $options);
-        $dependencies = $moduleManager->getDependencies();
-		
-    }
-    
-    public function testForDissatisfactionForPhpVersion()
-    {
-    	$options = new ManagerOptions(array(
-            'enable_dependency_check' => true,
-        ));
-        // build the cache
-        $moduleManager = new Manager(array('ImpossibleModule', 'BooModule'), $options);
-        $dependencies = $moduleManager->getDependencies();
-        $this->assertInternalType('array', $dependencies);
-        $this->assertFalse($dependencies['php']['satisfied']);
-    }
-    
-	public function testForDissatisfactionForExtension()
-    {
-    	$options = new ManagerOptions(array(
-            'enable_dependency_check' => true,
-        ));
-        // build the cache
-        $moduleManager = new Manager(array('ImpossibleModule', 'BooModule'), $options);
-        $dependencies = $moduleManager->getDependencies();
-        $this->assertInternalType('array', $dependencies);
-        $this->assertFalse($dependencies['php']['satisfied']);
-    }
-    
-	public function testResolutionOnInvalidExtension()
-    {
-    	$this->setExpectedException('RuntimeException');
-    	$options = new ManagerOptions(array(
-            'enable_dependency_check' => true,
-        ));
-        // build the cache
-        $moduleManager = new Manager(array('BooModule', 'BorModule'), $options);
-        $dependencies = $moduleManager->getDependencies();
-    }
-    
-	public function testResolutionOnInvalidModule()
-    {
-    	$this->setExpectedException('RuntimeException');
-    	$options = new ManagerOptions(array(
-            'enable_dependency_check' => true,
-        ));
-        // build the cache
-        $moduleManager = new Manager(array('BafModule'), $options);
-        $dependencies = $moduleManager->getDependencies();
-    }
-    
-	public function testForDissatisfactionForModule()
-    {
-    	$options = new ManagerOptions(array(
-            'enable_dependency_check' => true,
-        ));
-        // build the cache
-        $moduleManager = new Manager(array('BamModule'), $options);
-        $dependencies = $moduleManager->getDependencies();
-        $this->assertInternalType('array', $dependencies);
-        $this->assertFalse($dependencies['BooModule']['satisfied']);
-    }
-    
-	public function testThrowsExceptionIfGetDependenciesCalledAndEnableDependencyCheckIsFalse()
-    {
-    	$this->setExpectedException('RuntimeException');
-        $moduleManager = new Manager(array('BooModule', 'BorModule'));
-        $moduleManager->getDependencies();
-    }
-
-	public function testThrowsExceptionIfGetProvisionsCalledAndEnableDependencyCheckIsFalse()
-    {
-    	$this->setExpectedException('RuntimeException');
-        $moduleManager = new Manager(array('BooModule', 'BorModule'));
-        $moduleManager->getProvisions();
-    }
-
-    public function testAutoInstallationAndUpgradeUpdatesManifest()
-    {
-    	$options = new ManagerOptions(array(
-            'enable_auto_installation' => true,
-            'auto_install_whitelist' => array('AutoInstallModule'),
-            'manifest_dir' => $this->tmpdir,
-        ));
-        $moduleManager = new Manager(array('AutoInstallModule'), $options);
-        $manifest = include $this->tmpdir . DIRECTORY_SEPARATOR . '/manifest.php';
-        $this->assertEquals($manifest['AutoInstallModule']['version'], '1.0.0');
-        // Now test a fake upgrade
-        \AutoInstallModule\Module::$VERSION = '1.0.1';
-        $moduleManager = new Manager(array('AutoInstallModule'), $options);
-        $manifest = include $this->tmpdir . DIRECTORY_SEPARATOR . '/manifest.php';
-        $this->assertEquals($manifest['AutoInstallModule']['version'], '1.0.1');
-    }
-
-    public function testAutoInstallationThrowsExceptionOnFailedInstall()
-    {
-    	$this->setExpectedException('RuntimeException');
-    	$options = new ManagerOptions(array(
-            'enable_auto_installation' => true,
-            'auto_install_whitelist' => array('AutoInstallModule'),
-            'manifest_dir' => $this->tmpdir,
-        ));
-        \AutoInstallModule\Module::$RESPONSE = false;
-        $moduleManager = new Manager(array('AutoInstallModule'), $options);
-    }
-
-    public function testAutoUpgradeThrowsExceptionOnFailedUpgrade()
-    {
-    	$this->setExpectedException('RuntimeException');
-    	$options = new ManagerOptions(array(
-            'enable_auto_installation' => true,
-            'auto_install_whitelist' => array('AutoInstallModule'),
-            'manifest_dir' => $this->tmpdir,
-        ));
-        $moduleManager = new Manager(array('AutoInstallModule'), $options);
-        \AutoInstallModule\Module::$RESPONSE = false;
-        \AutoInstallModule\Module::$VERSION = '1.0.1';
-        $moduleManager = new Manager(array('AutoInstallModule'), $options);
     }
 }

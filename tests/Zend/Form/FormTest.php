@@ -34,8 +34,7 @@ use Zend\Form\Form,
     Zend\Json\Json,
     Zend\Translator\Translator,
     Zend\Validator\Validator,
-    Zend\View,
-    Zend\Controller\Front as FrontController;
+    Zend\View;
 
 /**
  * @category   Zend
@@ -62,10 +61,6 @@ class FormTest extends \PHPUnit_Framework_TestCase
 
     public function setUp()
     {
-        $front = FrontController::getInstance();
-        $front->resetInstance();
-        $this->broker = $front->getHelperBroker();
-
         $this->clearRegistry();
         Form::setDefaultTranslator(null);
 
@@ -2833,24 +2828,17 @@ class FormTest extends \PHPUnit_Framework_TestCase
         return $view;
     }
 
-    public function testGetViewRetrievesFromViewRendererByDefault()
+    public function testGetViewLazyLoadsPhpRendererByDefault()
     {
-        $viewRenderer = $this->broker->load('viewRenderer');
-        $viewRenderer->initView();
-        $view = $viewRenderer->view;
         $test = $this->form->getView();
-        $this->assertSame($view, $test);
-    }
-
-    public function testGetViewReturnsNullWhenNoViewRegisteredWithViewRenderer()
-    {
-        $this->assertNull($this->form->getView());
+        $this->assertInstanceOf('Zend\View\PhpRenderer', $test);
     }
 
     public function testCanSetView()
     {
         $view = new View\PhpRenderer();
-        $this->assertNull($this->form->getView());
+        $test = $this->form->getView();
+        $this->assertNotSame($view, $test);
         $this->form->setView($view);
         $received = $this->form->getView();
         $this->assertSame($view, $received);
@@ -4236,5 +4224,62 @@ class FormTest extends \PHPUnit_Framework_TestCase
         $this->form->setDecorators($t1);
         $t2 = $this->form->getDecorators();
         $this->assertEquals($t1, $t2);
+    }
+    
+    /**
+     * @group ZF-11831
+     */
+    public function testElementsOfSubFormReceiveCorrectDefaultTranslator()
+    {
+        $isEmptyKey = \Zend\Validator\NotEmpty::IS_EMPTY;
+        
+        // Global default translator
+        $trDefault = new Translator(array(
+            'adapter' => 'arrayAdapter',
+            'content' => array(
+                $isEmptyKey => 'Default'
+            ),
+            'locale' => 'en'
+        ));
+        Registry::set('Zend_Translate', $trDefault);
+        
+        // Translator to use for elements
+        $trElement = new Translator(array(
+            'adapter' => 'arrayAdapter',
+            'content' => array(
+                $isEmptyKey =>'Element'
+            ),
+            'locale' => 'en'
+        ));
+        \Zend\Validator\AbstractValidator::setDefaultTranslator($trElement);
+        
+        // Change the form's translator
+        $form = new Form();
+        $form->addElement(new \Zend\Form\Element\Text('foo', array(
+            'required'   => true,
+            'validators' => array('NotEmpty')
+        )));
+        
+        // Create a subform with it's own validator
+        $sf1 = new SubForm();
+        $sf1->addElement(new \Zend\Form\Element\Text('foosub', array(
+            'required'   => true,
+            'validators' => array('NotEmpty')
+        )));
+        $form->addSubForm($sf1, 'Test1');
+        
+        $form->isValid(array());
+
+        $messages = $form->getMessages();
+        $this->assertEquals(
+            'Element', 
+            @$messages['foo'][$isEmptyKey], 
+            'Form element received wrong validator'
+        );
+        $this->assertEquals(
+            'Element', 
+            @$messages['Test1']['foosub'][$isEmptyKey], 
+            'SubForm element received wrong validator'
+        );        
     }
 }
