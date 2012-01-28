@@ -267,7 +267,8 @@ class Application implements AppContext
         } catch (ClassNotFoundException $exception) {
             $error = clone $e;
             $error->setError(static::ERROR_CONTROLLER_NOT_FOUND)
-                  ->setController($controllerName);
+                  ->setController($controllerName)
+                  ->setParam('exception', $exception);
 
             $results = $events->trigger('dispatch.error', $error);
             if (count($results)) {
@@ -283,6 +284,7 @@ class Application implements AppContext
             $error->setError(static::ERROR_CONTROLLER_INVALID)
                   ->setController($controllerName)
                   ->setControllerClass(get_class($controller));
+            
             $results = $events->trigger('dispatch.error', $error);
             if (count($results)) {
                 $return  = $results->last();

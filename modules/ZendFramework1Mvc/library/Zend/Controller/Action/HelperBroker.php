@@ -15,7 +15,7 @@
  * @category   Zend
  * @package    Zend_Controller
  * @subpackage Zend_Controller_Action
- * @copyright  Copyright (c) 2005-2011 Zend Technologies USA Inc. (http://www.zend.com)
+ * @copyright  Copyright (c) 2005-2012 Zend Technologies USA Inc. (http://www.zend.com)
  * @license    http://framework.zend.com/license/new-bsd     New BSD License
  */
 
@@ -35,7 +35,7 @@ use Zend\Controller\Action,
  * @category   Zend
  * @package    Zend_Controller
  * @subpackage Zend_Controller_Action
- * @copyright  Copyright (c) 2005-2011 Zend Technologies USA Inc. (http://www.zend.com)
+ * @copyright  Copyright (c) 2005-2012 Zend Technologies USA Inc. (http://www.zend.com)
  * @license    http://framework.zend.com/license/new-bsd     New BSD License
  */
 class HelperBroker extends PluginSpecBroker implements \IteratorAggregate
@@ -114,6 +114,41 @@ class HelperBroker extends PluginSpecBroker implements \IteratorAggregate
         }
 
         return $this;
+    }
+    
+    /**
+     * Load and return a plugin instance
+     *
+     * If the plugin was previously loaded, returns that instance.
+     *
+     * If no options were passed, and we have no specification, load normally.
+     *
+     * If no options were passed, and we have a specification, use the
+     * specification to load an instance.
+     *
+     * Otherwise, simply try and load the plugin.
+     *
+     * @param  string $plugin
+     * @param  array|null $options
+     * @return object
+     * @throws Exception if plugin not found
+     */
+    public function load($plugin, array $options = null)
+    {
+        $pluginName = strtolower($plugin);
+        if (isset($this->plugins[$pluginName])) {
+            // If we've loaded it already, just return it
+            return $this->plugins[$pluginName];
+        }
+
+        $instance = parent::load($plugin, $options);
+
+        if (null !== $this->actionController) {
+            $instance->setActionController($this->actionController);
+            $instance->init();
+        }
+
+        return $instance;
     }
 
     /**
